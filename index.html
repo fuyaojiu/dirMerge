@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="/src/styles.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>文件操作小工具</title>
+  <script type="module" src="/src/main.ts" defer></script>
+</head>
+
+<body>
+  <main class="app-shell">
+    <header class="app-header">
+      <div>
+        <h1>文件操作小工具</h1>
+      </div>
+      <div id="status-message" class="status-panel" data-state="empty" aria-label="当前状态">
+        <span class="status-light" aria-hidden="true"></span>
+        <span class="status-copy" aria-live="polite">
+          <strong id="status-title">等待选择文件夹</strong>
+          <span id="status-detail">请选择原始文件夹和要合并的文件夹</span>
+        </span>
+        <button id="status-detail-button" class="status-detail-button" type="button" hidden>
+          详情
+        </button>
+        <span class="status-meter" aria-hidden="true"></span>
+      </div>
+    </header>
+
+    <nav class="tab-bar" role="tablist" aria-label="功能导航">
+      <button id="merge-tab" class="tab-button" type="button" role="tab" aria-selected="true"
+        aria-controls="merge-view">
+        合并文件夹
+      </button>
+      <button id="search-tab" class="tab-button" type="button" role="tab" aria-selected="false"
+        aria-controls="search-view">
+        文件夹搜索
+      </button>
+    </nav>
+
+    <section id="merge-view" class="tab-view" role="tabpanel" aria-labelledby="merge-tab">
+      <section class="merge-panel" aria-labelledby="merge-title">
+        <h2 id="merge-title">合并设置</h2>
+
+        <div class="folder-grid">
+          <label class="folder-field">
+            <span>原始文件夹</span>
+            <div class="path-row">
+              <output id="original-path" class="path-output is-empty">未选择</output>
+              <button id="select-original" type="button">选择</button>
+            </div>
+          </label>
+
+          <label class="folder-field">
+            <span>要合并的文件夹</span>
+            <div class="path-row">
+              <output id="merge-path" class="path-output is-empty">未选择</output>
+              <button id="select-merge" type="button">选择</button>
+            </div>
+          </label>
+        </div>
+
+        <div class="option-grid">
+          <fieldset class="operation-field">
+            <legend>操作方式</legend>
+            <div class="segmented-control">
+              <input id="operation-move" name="operation-mode" type="radio" value="move" checked />
+              <label for="operation-move">移动</label>
+              <input id="operation-copy" name="operation-mode" type="radio" value="copy" />
+              <label for="operation-copy">复制</label>
+            </div>
+          </fieldset>
+
+          <label class="toggle-field">
+            <span>生成重复文件</span>
+            <input id="archive-duplicates" type="checkbox" />
+          </label>
+        </div>
+
+        <div class="actions">
+          <button id="merge-button" class="primary-action" type="button" disabled>
+            开始合并
+          </button>
+        </div>
+
+        <div id="progress-panel" class="progress-panel" hidden>
+          <div class="progress-header">
+            <span id="progress-stage">准备中</span>
+            <strong id="progress-percent">0%</strong>
+          </div>
+          <progress id="merge-progress" max="100" value="0"></progress>
+          <div class="progress-meta">
+            <span><span id="progress-completed">0</span>/<span id="progress-total">0</span></span>
+            <span id="progress-current" class="progress-current"></span>
+          </div>
+        </div>
+      </section>
+
+      <section id="report" class="report-panel" hidden aria-live="polite">
+        <h2>合并结果</h2>
+        <dl class="stats-grid">
+          <div>
+            <dt id="processed-files-label">复制文件</dt>
+            <dd id="copied-files">0</dd>
+          </div>
+          <div>
+            <dt>新增目录</dt>
+            <dd id="created-dirs">0</dd>
+          </div>
+          <div>
+            <dt>合并目录</dt>
+            <dd id="merged-dirs">0</dd>
+          </div>
+          <div>
+            <dt>重复文件</dt>
+            <dd id="duplicate-files">0</dd>
+          </div>
+          <div>
+            <dt>重复文件大小</dt>
+            <dd id="duplicate-size">0 B</dd>
+          </div>
+          <div>
+            <dt>路径冲突</dt>
+            <dd id="path-conflicts">0</dd>
+          </div>
+        </dl>
+
+        <div id="duplicate-panel" class="duplicate-panel" hidden>
+          <h3 id="duplicate-title">重复文件</h3>
+          <div id="duplicate-tree" class="duplicate-tree" role="tree"></div>
+        </div>
+
+        <div id="skipped-panel" class="skipped-panel" hidden>
+          <h3 id="skipped-title">已跳过</h3>
+          <div id="skipped-viewport" class="skipped-viewport">
+            <div id="skipped-spacer" class="skipped-spacer">
+              <ul id="skipped-list"></ul>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section id="search-view" class="tab-view" role="tabpanel" aria-labelledby="search-tab" hidden>
+      <section class="search-panel" aria-labelledby="search-title">
+        <h2 id="search-title">文件夹搜索</h2>
+
+        <label class="folder-field">
+          <span>搜索文件夹</span>
+          <div class="path-row">
+            <output id="search-root-path" class="path-output is-empty">未选择</output>
+            <button id="select-search-root" type="button">选择</button>
+          </div>
+        </label>
+
+        <div class="search-grid">
+          <label class="search-field">
+            <span>关键词</span>
+            <input id="search-query" type="search" placeholder="输入文件名或文件夹名" />
+          </label>
+
+          <fieldset class="search-filter-field">
+            <legend>搜索类型</legend>
+            <div class="filter-row">
+              <label class="check-chip">
+                <input id="include-files" type="checkbox" checked />
+                <span>文件</span>
+              </label>
+              <label class="check-chip">
+                <input id="include-directories" type="checkbox" checked />
+                <span>文件夹</span>
+              </label>
+            </div>
+          </fieldset>
+        </div>
+
+        <div class="actions">
+          <button id="cancel-search-button" class="secondary-action" type="button" hidden>
+            停止
+          </button>
+          <button id="search-button" class="primary-action" type="button" disabled>
+            开始搜索
+          </button>
+        </div>
+
+        <div id="search-progress-panel" class="progress-panel search-progress-panel" hidden>
+          <div class="progress-header">
+            <span id="search-progress-stage">准备中</span>
+            <strong id="search-progress-percent">0%</strong>
+          </div>
+          <progress id="search-progress" max="100" value="0"></progress>
+          <div class="progress-meta">
+            <span>
+              扫描 <span id="search-progress-scanned">0</span>/<span id="search-progress-total">0</span>
+            </span>
+            <span>
+              匹配 <span id="search-progress-matched">0</span>
+            </span>
+            <span>
+              跳过 <span id="search-progress-skipped">0</span>
+            </span>
+          </div>
+          <div id="search-progress-current" class="progress-current"></div>
+        </div>
+      </section>
+
+      <section id="search-report" class="search-report-panel" hidden aria-live="polite">
+        <div class="search-report-header">
+          <h2 id="search-result-title">搜索结果</h2>
+          <div class="search-meta">
+            <span>扫描 <strong id="search-scanned">0</strong> 项</span>
+            <span>跳过 <strong id="search-skipped">0</strong> 项</span>
+          </div>
+        </div>
+        <p id="search-empty" class="search-empty" hidden>没有匹配结果</p>
+        <div class="search-table" role="table" aria-label="搜索结果">
+          <div class="search-table-header" role="row">
+            <button class="table-heading is-sortable" type="button" data-sort-field="kind" role="columnheader">
+              类型 <span class="sort-indicator" aria-hidden="true"></span>
+            </button>
+            <button class="table-heading is-sortable" type="button" data-sort-field="name" role="columnheader">
+              名称 <span class="sort-indicator" aria-hidden="true"></span>
+            </button>
+            <button class="table-heading is-sortable" type="button" data-sort-field="size" role="columnheader">
+              大小 <span class="sort-indicator" aria-hidden="true"></span>
+            </button>
+            <div class="table-heading" role="columnheader">路径</div>
+            <div class="table-heading" role="columnheader">操作</div>
+          </div>
+          <div id="search-result-viewport" class="search-result-viewport" role="rowgroup">
+            <div id="search-result-spacer" class="search-result-spacer">
+              <ul id="search-result-list"></ul>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <dialog id="error-dialog" class="error-dialog">
+    <form method="dialog">
+      <header>
+        <h2>错误详情</h2>
+        <button class="dialog-close" type="submit" aria-label="关闭">关闭</button>
+      </header>
+      <pre id="error-details"></pre>
+    </form>
+  </dialog>
+</body>
+
+</html>
